@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "cuda-100"
+  site-url: "https://xl0.github.io/cuda-100"
+  description: "100 days of CUDA"
+  repo-branch: master
+  repo-url: "https://github.com/xl0/cuda-100"
