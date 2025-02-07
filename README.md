@@ -10,6 +10,7 @@
 - `mamba cuda`
 - `pip install pycuda`
 
-``` python
-### Day 0 - playing with PyCUDA
-```
+##### Progress
+
+- [Day 0](https://xl0.github.io/cuda-100/day_00_pycuda/pycuda.html) -
+  playing with PyCUDA
