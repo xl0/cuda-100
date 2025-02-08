@@ -14,3 +14,5 @@
 
 - [Day 0](https://xl0.github.io/cuda-100/day_00_pycuda/pycuda.html) -
   playing with PyCUDA
+- [Day 1](https://github.com/xl0/cuda-100/nbs/day_01_nvcc) - playing
+  with NVCC, vector addition.
