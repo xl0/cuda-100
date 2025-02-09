@@ -2,6 +2,5 @@ website:
   sidebar:
     contents:
       - index.ipynb
-      - section: Day 00 - PyCUDA
-        contents:
-          - day_00_pycuda/pycuda.ipynb
+      - day_00_pycuda.ipynb
+      - day_02_grayscale.ipynb
