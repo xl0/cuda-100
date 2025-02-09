@@ -11,7 +11,7 @@ __global__ void rgb_blur(uint8_t *in, uint8_t *out, uint32_t w, uint32_t h, uint
 
         for (int ch = 0; ch < 3; ch++) {
             uint32_t v = 0;
-            for (int j = -blur; j <= blur; j++) {
+            for (int j = -blur; j <= (int)blur; j++) {
                 for (int i = -blur; i <= (int)blur; i++) {
                     if (y + j >= 0   &&
                         y + j < h    &&
