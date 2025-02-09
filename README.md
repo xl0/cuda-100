@@ -16,5 +16,5 @@
   with PyCUDA
 - [Day 1](https://github.com/xl0/cuda-100/tree/master/nbs/day_01_nvcc) -
   playing with NVCC, vector addition.
-- [Day 2](https://xl0.github.io/cuda-100/day_02_grayscale.html) -
-  playing with PyCUDA
+- [Day 2](https://xl0.github.io/cuda-100/day_02_grayscale.html) - RGB 2
+  gray
