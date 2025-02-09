@@ -18,6 +18,7 @@
   playing with NVCC, vector addition.
 - [Day 2](https://xl0.github.io/cuda-100/day_02_grayscale.html) - RGB 2
   gray
+- [Day 3](https://xl0.github.io/cuda-100/day_03_blurry.html) - RGB blur
 
 Some CUDA (or C) quirks to note:
 
