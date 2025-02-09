@@ -7,7 +7,7 @@
 #endif
 
 
-__global__ void vecAddKernel(float *a, float *b, float *c, uint n)
+__global__ void testKernel(float *a, float *b, float *c, uint n)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -30,7 +30,7 @@ void vecAdd_f32(float *A, float *B, float *C, uint n) {
     cudaMemcpy(A_d, A, size, cudaMemcpyHostToDevice);
     cudaMemcpy(B_d, B, size, cudaMemcpyHostToDevice);
 
-    vecAddKernel <<<(n + N_THREADS - 1) / N_THREADS, N_THREADS>>>(A_d, B_d, C_d, n);
+    testKernel <<<(n + N_THREADS - 1) / N_THREADS, N_THREADS>>>(A_d, B_d, C_d, n);
 
     cudaMemcpy(C, C_d, size, cudaMemcpyDeviceToHost);
 

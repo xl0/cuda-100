@@ -1,6 +1,18 @@
 project:
   type: website
 
+
+# filters:
+#   - day_01_nvcc/src/hello.cu
+# format:
+#   html:
+#     code-tools: true
+#     code-fold: false
+#     code-block-background: true
+#     code-block-border-left: "#31BAE9"
+#     highlight-style: github
+
+
 format:
   html:
     theme: cosmo
@@ -24,5 +36,13 @@ website:
         href: "https://x.com/xl0xl0xl0"
   sidebar:
     style: floating
+    # contents:
+    # - index.ipynb
+    # - section: "Source Files"
+    #   contents:
+    #     - text: "hello"
+    #       file: day_01_nvcc/src/hello.cu
+    #       format: c++
+
 
 metadata-files: [nbdev.yml, sidebar.yml]

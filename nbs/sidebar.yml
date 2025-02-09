@@ -3,4 +3,6 @@ website:
     contents:
       - index.ipynb
       - day_00_pycuda.ipynb
+      - day_01_nvcc.ipynb
       - day_02_grayscale.ipynb
+      - day_03_blurry.ipynb

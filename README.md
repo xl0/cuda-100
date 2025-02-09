@@ -18,3 +18,12 @@
   playing with NVCC, vector addition.
 - [Day 2](https://xl0.github.io/cuda-100/day_02_grayscale.html) - RGB 2
   gray
+
+Some CUDA (or C) quirks to note:
+
+    uint32_t a =  1;
+    int32_t  j = -1;
+    j >= a: True
+    j +  a: 0
+
+Somehow this is how type casting works in C. :/
