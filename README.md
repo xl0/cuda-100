@@ -20,7 +20,7 @@
   gray](https://xl0.github.io/cuda-100/day_02_grayscale.html)
 - Day 3 [RGB blur](https://xl0.github.io/cuda-100/day_03_blurry.html)
 - Day 4 [Naive
-  matmul](https://xl0.github.io/cuda-100/day_04_matmaul.htm)
+  matmul](https://xl0.github.io/cuda-100/day_04_matmul.html)
 
 Some CUDA (or C) quirks to note:
 
