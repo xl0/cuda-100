@@ -12,13 +12,15 @@
 
 ##### Progress
 
-- [Day 0](https://xl0.github.io/cuda-100/day_00_pycuda.html) - playing
-  with PyCUDA
-- [Day 1](https://github.com/xl0/cuda-100/tree/master/nbs/day_01_nvcc) -
-  playing with NVCC, vector addition.
-- [Day 2](https://xl0.github.io/cuda-100/day_02_grayscale.html) - RGB 2
-  gray
-- [Day 3](https://xl0.github.io/cuda-100/day_03_blurry.html) - RGB blur
+- Day 0 [playing with
+  PyCUDA](https://xl0.github.io/cuda-100/day_00_pycuda.html)
+- Day 1 [playing with NVCC, vector
+  addition](https://github.com/xl0/cuda-100/tree/master/nbs/day_01_nvcc)
+- Day 2 [RGB 2
+  gray](https://xl0.github.io/cuda-100/day_02_grayscale.html)
+- Day 3 [RGB blur](https://xl0.github.io/cuda-100/day_03_blurry.html)
+- Day 4 [Naive
+  matmul](https://xl0.github.io/cuda-100/day_04_matmaul.htm)
 
 Some CUDA (or C) quirks to note:
 
