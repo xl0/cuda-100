@@ -23,3 +23,4 @@ __global__ void matmul_f32(float *m1, float *m2, float *res,
     }
 }
 
+
