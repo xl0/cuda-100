@@ -6,3 +6,7 @@ website:
       - day_01_nvcc.ipynb
       - day_02_grayscale.ipynb
       - day_03_blurry.ipynb
+      - day_04_matmul.ipynb
+      - day_05_matrix-vector.ipynb
+      - day_06_matmul-tiled.ipynb
+      - day_07_matmul-tiled-experiments.ipynb

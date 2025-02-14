@@ -25,6 +25,8 @@
   multiplication](https://xl0.github.io/cuda-100/day_05_matrix-vector.html)
 - Day 6 [Tiled
   matmul](https://xl0.github.io/cuda-100/day_06_matmul-tiled.html)
+- Day 7 [Tiled matmul-
+  experiments](https://xl0.github.io/cuda-100/day_06_matmul-tiled-experiments.html)
 
 Some CUDA (or C) quirks to note:
 
