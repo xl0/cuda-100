@@ -29,6 +29,8 @@
   experiments](https://xl0.github.io/cuda-100/day_07_matmul-tiled-experiments.html)
 - Day 8 [Tiled matmul - thread
   coarsening](https://xl0.github.io/cuda-100/day_08_thread-coarsening.html)
+- Day 9 [Naive conv2d with arbitrary number of
+  channels](https://xl0.github.io/cuda-100/day_09_conv2d.html)
 
 Some CUDA (or C) quirks to note:
 
