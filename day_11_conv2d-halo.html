@@ -1,0 +1,1688 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.42">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Day 11 - conv2d with shared memory – cuda-100</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-2f5df379a58b258e96c21c0638c20c03.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-a46dc4aef9e391a85643b3ed89f95805.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+<script src="https://unpkg.com/@jupyter-widgets/html-manager@*/dist/embed-amd.js" crossorigin="anonymous"></script>
+
+
+<link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="Day 11 - conv2d with shared memory – cuda-100">
+<meta property="og:description" content="100 days of CUDA">
+<meta property="og:image" content="https://xl0.github.io/cuda-100/day_11_conv2d-halo_files/figure-html/cell-11-output-1.png">
+<meta property="og:site_name" content="cuda-100">
+<meta property="og:image:height" content="1589">
+<meta property="og:image:width" content="1189">
+<meta name="twitter:title" content="Day 11 - conv2d with shared memory – cuda-100">
+<meta name="twitter:description" content="100 days of CUDA">
+<meta name="twitter:image" content="https://xl0.github.io/cuda-100/day_11_conv2d-halo_files/figure-html/cell-11-output-1.png">
+<meta name="twitter:creator" content="@xl0xl0xl0">
+<meta name="twitter:image-height" content="1589">
+<meta name="twitter:image-width" content="1189">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+
+<body class="nav-sidebar floating nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">cuda-100</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="http://github.com/xl0/cuda-100"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://x.com/xl0xl0xl0"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./day_11_conv2d-halo.html">Day 11 - conv2d with shared memory</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">100 days of CUDA</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./day_00_pycuda.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Day 0 - playing with PyCUDA</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./day_01_nvcc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Day 1 - playing with nvcc</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./day_02_grayscale.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Day 2 - RGB to grayscale</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./day_03_blurry.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Day 3 - RGB blur</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./day_04_matmul.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Day 4 - Naive matmul+exercises</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./day_05_matrix-vector.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Day 5 - Matrix-vector multiplication</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./day_06_matmul-tiled.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Day 6 - Tiled matmul</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./day_07_matmul-tiled-experiments.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Day 7 - Tiled matmul experiments</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./day_08_thread-coarsening.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Day 8 - Thread coarsening</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./day_09_conv2d.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Day 9 - Conv 2D</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./day_10_conv2d-experiments.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Day 10 - Improving Conv2d performance</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./day_11_conv2d-halo.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Day 11 - conv2d with shared memory</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#for-some-reason-the-version-with-shared-memory-is-actually-slower.-not-entirely-sure-why-because-it-looks-correct" id="toc-for-some-reason-the-version-with-shared-memory-is-actually-slower.-not-entirely-sure-why-because-it-looks-correct" class="nav-link active" data-scroll-target="#for-some-reason-the-version-with-shared-memory-is-actually-slower.-not-entirely-sure-why-because-it-looks-correct">For some reason, the version with shared memory is actually slower. Not entirely sure why, because it looks correct</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content column-page-right" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Day 11 - conv2d with shared memory</h1>
+</div>
+
+
+
+<div class="quarto-title-meta column-page-right">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- WARNING: THIS FILE WAS AUTOGENERATED! DO NOT EDIT! -->
+<div id="cell-3" class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> math <span class="im">import</span> prod</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> PIL <span class="im">import</span> Image</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tqdm.auto <span class="im">import</span> tqdm</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-4" class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> lovely_numpy <span class="im">import</span> Lo</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> lovely_tensors <span class="im">import</span> monkey_patch<span class="op">;</span> monkey_patch()</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> torch <span class="im">import</span> Tensor</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> torch.nn.functional <span class="im">import</span> conv2d</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-5" class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pycuda.driver <span class="im">as</span> cuda</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pycuda.compiler <span class="im">import</span> SourceModule</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>cuda.init()</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>device <span class="op">=</span> cuda.Device(<span class="dv">0</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Cuda version: </span><span class="sc">{</span><span class="st">"."</span><span class="sc">.</span>join([<span class="bu">str</span>(i) <span class="cf">for</span> i <span class="kw">in</span> cuda.get_version()])<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Device:</span><span class="ch">\t</span><span class="sc">{</span>device<span class="sc">.</span>name()<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Cuda version: 12.8.0
+Device: NVIDIA GeForce RTX 3080 Laptop GPU</code></pre>
+</div>
+</div>
+<div id="cell-6" class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>cu_file<span class="op">=</span><span class="st">"day_11_conv2d-halo.cu"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><a href="https://github.com/xl0/cuda-100/blob/master/nbs/day_11_conv2d-halo.cu">day_11_conv2d-halo.cu</a></p>
+<div class="code-block">
+<pre><code>#include &lt;stdint.h&gt;
+#include &lt;stdio.h&gt;
+
+/* This version uses the z grid dimensions for out channels, the inside the the tile is copied into
+ * shared memory */
+__global__ void conv2d_pad_z_out_shared(float *in,
+                                        float *out,
+                                        float *filter,
+                                        int h,
+                                        int w,
+                                        int in_channels,
+                                        int out_channels,
+                                        int filter_size /* Must be an odd number */,
+                                        float pad) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    int out_ch = blockIdx.z;
+
+    int filter_r = (filter_size - 1) / 2;
+
+    extern __shared__ float tile[];
+
+    // In and Out data dimensions:
+    // 0 - channel
+    // 1 - height
+    // 2 - width
+
+    // Filter dimensions:
+    // 0 - out channels
+    // 1 - in channels
+    // 2 - height
+    // 3 - width
+
+    // if (x == 0 &amp;&amp; y == 0 &amp;&amp; blockIdx.z == 0) {
+    //     printf("h: %d\n", h);
+    //     printf("w: %d\n", w);
+    //     printf("in_channels: %d\n", in_channels);
+    //     printf("out_channels: %d\n", out_channels);
+    //     printf("filter_size: %d\n", filter_size);
+    //     printf("filter r: %d\n", filter_r);
+    //     printf("pad: %f\n", pad);
+
+    //     // printf("Filter:\n");
+    //     // for (int oc = 0; oc &lt; out_channels; oc++) {
+    //     //     printf("Output channel %d:\n", oc);
+    //     //     for (int ic = 0; ic &lt; in_channels; ic++) {
+    //     //         printf("  Input channel %d:\n", ic);
+    //     //         float *sub_filter = filter + (filter_size * filter_size * in_channels * oc) +
+    //     //                             (filter_size * filter_size * ic);
+    //     //         for (int i = 0; i &lt; filter_size; i++) {
+    //     //             printf("    ");
+    //     //             for (int j = 0; j &lt; filter_size; j++) {
+    //     //                 printf("%f ", sub_filter[i * filter_size + j]);
+    //     //             }
+    //     //             printf("\n");
+    //     //         }
+    //     //     }
+    //     // }
+    // }
+
+    if (x &gt;= w || y &gt;= h) return;
+
+    // Loop over the output channels
+
+    // // Pointer to the 2d slice of the output
+
+    float *sub_output = out + out_ch * w * h;
+    float R = 0;
+    // Loop over the input channels
+    for (int in_c = 0; in_c &lt; in_channels; in_c++) {
+        // Pointer to the 2d slice of the filter that corresponds to the active input and output
+        // channels
+        float *sub_filter = filter + (filter_size * filter_size * in_channels * out_ch) +
+                            (filter_size * filter_size * in_c);
+        // Pinter to the current channel in the input
+        float *sub_input = in + (w * h * in_c);
+
+        tile[threadIdx.y * blockDim.x + threadIdx.x] = sub_input[y * w + x];
+        __syncthreads();  // Wait for all threads to load the input
+
+        // Apply the filter to the input or the pad value for outside indices.
+        for (int filter_y = 0; filter_y &lt; filter_size; filter_y++) {
+            for (int filter_x = 0; filter_x &lt; filter_size; filter_x++) {
+                int tile_x = threadIdx.x - filter_r + filter_x;
+                int tile_y = threadIdx.y - filter_r + filter_y;
+
+                int input_x = x - filter_r + filter_x;
+                int input_y = y - filter_r + filter_y;
+
+                if (tile_x &gt;= 0 &amp;&amp; tile_x &lt; blockDim.x &amp;&amp; tile_y &gt;= 0 &amp;&amp; tile_y &lt; blockDim.y) {
+                    R += tile[tile_y * blockDim.x + tile_x] *
+                         sub_filter[filter_y * filter_size + filter_x];
+                } else if (input_x &gt;= 0 &amp;&amp; input_x &lt; w &amp;&amp; input_y &gt;= 0 &amp;&amp; input_y &lt; h) {
+                    R += sub_input[input_y * w + input_x] *
+                         sub_filter[filter_y * filter_size + filter_x];
+                } else {
+                    R += pad * sub_filter[filter_y * filter_size + filter_x];
+                }
+            }
+        }
+
+        __syncthreads();  // Wait for all threads to complete before we load the next input
+    }
+
+    sub_output[y * w + x] = R;
+}
+</code></pre>
+</div>
+<div id="cell-8" class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">## Compiler options for more compile-time warnings.</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>warn_options<span class="op">=</span>[</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">'-Xcompiler'</span>, <span class="st">'-Wall'</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">'-Xcompiler'</span>, <span class="st">'-Wextra'</span>,</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">'-Xcompiler'</span>, <span class="st">'-Wsign-conversion'</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">'-Xcompiler'</span>, <span class="st">'-Wcast-qual'</span>,</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">'-Xcompiler'</span>, <span class="st">'-Wunused-parameter'</span>,</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">'-Xcompiler'</span>, <span class="st">'-Wdouble-promotion'</span>,</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">'-Xcompiler'</span>, <span class="st">'-Wformat=2'</span>,</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">'-Xcompiler'</span>, <span class="st">'-Wfloat-equal'</span>,</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">'-Xcompiler'</span>, <span class="st">'-Wshadow'</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-9" class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> benchmark_conv2d_pad(ctx, kernel, <span class="bu">input</span>, <span class="bu">filter</span>, pad, block_size, grid_size, shared<span class="op">=</span><span class="va">None</span>, repeat<span class="op">=</span><span class="dv">10</span>, warmup<span class="op">=</span><span class="va">True</span>):</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># input, channel-first</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="co"># - Channel</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># - Height</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># - Width</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> <span class="bu">len</span>(<span class="bu">input</span>.shape) <span class="op">==</span> <span class="dv">3</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Filter shape should be</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># - Out channels</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># - In  channels</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="co"># - Height</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># - Width</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> <span class="bu">len</span>(<span class="bu">filter</span>.shape) <span class="op">==</span> <span class="dv">4</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    in_ch, h, w <span class="op">=</span> <span class="bu">input</span>.shape</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>    out_ch, in_ch2, fh, fw <span class="op">=</span> <span class="bu">filter</span>.shape</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> fh <span class="op">==</span> fw, <span class="ss">f"Only square filters supported, got shape=</span><span class="sc">{</span><span class="bu">filter</span><span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> in_ch <span class="op">==</span> in_ch2</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>    out_shape <span class="op">=</span> (out_ch, h, w)</span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>    <span class="co"># print(f"shared = {shared}")</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>    <span class="co"># print(f"out_shape={out_shape}")</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>    gpu_input <span class="op">=</span> cuda.mem_alloc_like(<span class="bu">input</span>)</span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>    gpu_filter <span class="op">=</span> cuda.mem_alloc_like(<span class="bu">filter</span>)</span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>    out <span class="op">=</span> np.empty(out_shape, dtype<span class="op">=</span>np.float32)</span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>    cuda.memcpy_htod(gpu_input, <span class="bu">input</span>)</span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>    cuda.memcpy_htod(gpu_filter, <span class="bu">filter</span>)</span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a>    ctx.synchronize()</span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>    timing<span class="op">=</span><span class="dv">0</span></span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(repeat):</span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a>        start <span class="op">=</span> cuda.Event()</span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a>        end <span class="op">=</span> cuda.Event()</span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a>        gpu_out <span class="op">=</span> cuda.mem_alloc_like(out)</span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> warmup:</span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>            kernel(gpu_input, gpu_out, gpu_filter,</span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>                   np.int32(h),</span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a>                   np.int32(w),</span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a>                   np.int32(in_ch),</span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a>                   np.int32(out_ch),</span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a>                   np.int32(fh),</span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a>                   np.float32(pad),</span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a>                   grid<span class="op">=</span>grid_size,</span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a>                   block<span class="op">=</span>block_size,</span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a>                   shared<span class="op">=</span>shared</span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a>                   )</span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a>            ctx.synchronize()</span>
+<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a>        start.record()</span>
+<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a>        kernel(gpu_input, gpu_out, gpu_filter,</span>
+<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a>               np.int32(h),</span>
+<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a>               np.int32(w),</span>
+<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a>               np.int32(in_ch),</span>
+<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a>               np.int32(out_ch),</span>
+<span id="cb8-62"><a href="#cb8-62" aria-hidden="true" tabindex="-1"></a>               np.int32(fh),</span>
+<span id="cb8-63"><a href="#cb8-63" aria-hidden="true" tabindex="-1"></a>               np.float32(pad),</span>
+<span id="cb8-64"><a href="#cb8-64" aria-hidden="true" tabindex="-1"></a>               grid<span class="op">=</span>grid_size,</span>
+<span id="cb8-65"><a href="#cb8-65" aria-hidden="true" tabindex="-1"></a>               block<span class="op">=</span>block_size,</span>
+<span id="cb8-66"><a href="#cb8-66" aria-hidden="true" tabindex="-1"></a>               shared<span class="op">=</span>shared)</span>
+<span id="cb8-67"><a href="#cb8-67" aria-hidden="true" tabindex="-1"></a>        end.record()</span>
+<span id="cb8-68"><a href="#cb8-68" aria-hidden="true" tabindex="-1"></a>        end.synchronize()</span>
+<span id="cb8-69"><a href="#cb8-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-70"><a href="#cb8-70" aria-hidden="true" tabindex="-1"></a>        timing <span class="op">+=</span> end.time_since(start)</span>
+<span id="cb8-71"><a href="#cb8-71" aria-hidden="true" tabindex="-1"></a>    timing <span class="op">/=</span> repeat</span>
+<span id="cb8-72"><a href="#cb8-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-73"><a href="#cb8-73" aria-hidden="true" tabindex="-1"></a>    cuda.memcpy_dtoh(out, gpu_out)</span>
+<span id="cb8-74"><a href="#cb8-74" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> out, timing<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-10" class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>in_chan_range <span class="op">=</span> [<span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">8</span>, <span class="dv">32</span>, <span class="dv">128</span>, <span class="dv">512</span>]</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>out_chan_range <span class="op">=</span> [<span class="dv">1</span>, <span class="dv">4</span>, <span class="dv">8</span>, <span class="dv">32</span>, <span class="dv">128</span>, <span class="dv">512</span>]</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>filter_size <span class="op">=</span> [<span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">9</span>]</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>img_size_range <span class="op">=</span> [<span class="dv">64</span>, <span class="dv">128</span>, <span class="dv">256</span>, <span class="dv">512</span>, <span class="dv">1024</span>]</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Let's sample from the available options.</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>n_samples <span class="op">=</span> <span class="dv">50</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate all possible combinations</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>combinations <span class="op">=</span> []</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> in_ch <span class="kw">in</span> in_chan_range:</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> out_ch <span class="kw">in</span> out_chan_range:</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> fs <span class="kw">in</span> filter_size:</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> img_size <span class="kw">in</span> img_size_range:</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>                    n <span class="op">=</span> in_ch <span class="op">*</span> out_ch <span class="op">*</span> img_size <span class="op">*</span> img_size</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>                    <span class="co"># Skip combinatoins that are too large</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> n <span class="op">&lt;</span> <span class="dv">1024</span><span class="op">*</span><span class="dv">1024</span><span class="op">*</span><span class="dv">32</span><span class="op">*</span><span class="dv">32</span>:</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>                        combinations.append((in_ch, out_ch, fs, img_size))</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>n_samples <span class="op">=</span> <span class="bu">min</span>(n_samples, <span class="bu">len</span>(combinations))</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>sampled_combinations <span class="op">=</span> np.random.choice(<span class="bu">len</span>(combinations), size<span class="op">=</span>n_samples, replace<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>test_cases <span class="op">=</span> [combinations[i] <span class="cf">for</span> i <span class="kw">in</span> sampled_combinations]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-11" class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>tile_width <span class="op">=</span> <span class="dv">32</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> []</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co"># test_cases = [(512, 8, 9, 64)]</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>ctx <span class="op">=</span> device.make_context()</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    mod <span class="op">=</span> SourceModule(Path(cu_file).read_text(), options<span class="op">=</span>warn_options)</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    mod_day10 <span class="op">=</span> SourceModule(Path(<span class="st">"day_10_conv2d-experiments.cu"</span>).read_text(), options<span class="op">=</span>warn_options)</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    kernels <span class="op">=</span> {k: mod.get_function(k) <span class="cf">for</span> k <span class="kw">in</span> [<span class="st">"conv2d_pad_z_out_shared"</span>]} <span class="op">|</span> {k: mod_day10.get_function(k) <span class="cf">for</span> k <span class="kw">in</span> [<span class="st">"conv2d_pad"</span>, <span class="st">"conv2d_pad_z_out"</span>]}</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> tc <span class="kw">in</span> tqdm(test_cases):</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>        ch_in, ch_out, fs, pixels <span class="op">=</span> tc</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>        array_in <span class="op">=</span> np.random.randn(ch_in, pixels, pixels).astype(np.float32)</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>        <span class="bu">filter</span> <span class="op">=</span> np.random.randn(ch_out, ch_in, fs, fs).astype(np.float32)</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>        torch_out <span class="op">=</span> conv2d(Tensor(array_in), Tensor(<span class="bu">filter</span>), padding<span class="op">=</span><span class="st">"same"</span>)</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>        timings <span class="op">=</span> {}</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> kernel_name, kernel <span class="kw">in</span> kernels.items():</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>            block_size <span class="op">=</span> (tile_width, tile_width, <span class="dv">1</span>)</span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>            grid_size <span class="op">=</span> (((pixels<span class="op">+</span>tile_width<span class="op">-</span><span class="dv">1</span>) <span class="op">//</span> tile_width), ((pixels<span class="op">+</span>tile_width<span class="op">-</span><span class="dv">1</span>) <span class="op">//</span> tile_width), <span class="dv">1</span> <span class="cf">if</span> kernel_name <span class="op">==</span> <span class="st">"conv2d_pad"</span> <span class="cf">else</span> ch_out)</span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>            out, timing <span class="op">=</span> benchmark_conv2d_pad(</span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>                ctx<span class="op">=</span>ctx,</span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>                kernel<span class="op">=</span>kernel,</span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>                <span class="bu">input</span><span class="op">=</span>array_in,</span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>                <span class="bu">filter</span><span class="op">=</span><span class="bu">filter</span>,</span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>                pad<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>                block_size<span class="op">=</span>block_size,</span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a>                grid_size<span class="op">=</span>grid_size,</span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a>                shared<span class="op">=</span>tile_width <span class="op">*</span> tile_width <span class="op">*</span> <span class="dv">4</span> <span class="cf">if</span> kernel_name <span class="op">==</span> <span class="st">"conv2d_pad_z_out_shared"</span> <span class="cf">else</span> <span class="dv">0</span>,</span>
+<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a>                repeat<span class="op">=</span><span class="dv">3</span>,</span>
+<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a>                warmup<span class="op">=</span><span class="va">True</span></span>
+<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a>            )</span>
+<span id="cb10-42"><a href="#cb10-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-43"><a href="#cb10-43" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> np.isclose(out, torch_out).mean() <span class="op">&lt;</span> <span class="fl">0.8</span>:</span>
+<span id="cb10-44"><a href="#cb10-44" aria-hidden="true" tabindex="-1"></a>                <span class="bu">print</span>(<span class="st">"### Result mismatch ###"</span>)</span>
+<span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a>                <span class="bu">print</span>(<span class="ss">f"Kernel: </span><span class="sc">{</span>kernel_name<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb10-46"><a href="#cb10-46" aria-hidden="true" tabindex="-1"></a>                <span class="bu">print</span>(<span class="ss">f"Input shape: </span><span class="sc">{</span>array_in<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb10-47"><a href="#cb10-47" aria-hidden="true" tabindex="-1"></a>                <span class="bu">print</span>(<span class="ss">f"Filter shape: </span><span class="sc">{</span><span class="bu">filter</span><span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb10-48"><a href="#cb10-48" aria-hidden="true" tabindex="-1"></a>                <span class="bu">print</span>(<span class="ss">f"Result shape: </span><span class="sc">{</span>(<span class="bu">filter</span>.shape[<span class="dv">0</span>], array_in.shape[<span class="dv">1</span>], array_in.shape[<span class="dv">2</span>])<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb10-49"><a href="#cb10-49" aria-hidden="true" tabindex="-1"></a>                <span class="bu">print</span>(<span class="ss">f"Grid size: </span><span class="sc">{</span>grid_size<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb10-50"><a href="#cb10-50" aria-hidden="true" tabindex="-1"></a>                <span class="bu">print</span>(<span class="ss">f"Block size: </span><span class="sc">{</span>block_size<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb10-51"><a href="#cb10-51" aria-hidden="true" tabindex="-1"></a>                <span class="bu">print</span>(<span class="ss">f"Total threads: </span><span class="sc">{</span>prod((<span class="op">*</span>grid_size, <span class="op">*</span>block_size))<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb10-52"><a href="#cb10-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-53"><a href="#cb10-53" aria-hidden="true" tabindex="-1"></a>            timings[kernel_name] <span class="op">=</span> timing</span>
+<span id="cb10-54"><a href="#cb10-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-55"><a href="#cb10-55" aria-hidden="true" tabindex="-1"></a>        data.append({</span>
+<span id="cb10-56"><a href="#cb10-56" aria-hidden="true" tabindex="-1"></a>            <span class="st">'in_ch'</span>: ch_in,</span>
+<span id="cb10-57"><a href="#cb10-57" aria-hidden="true" tabindex="-1"></a>            <span class="st">'out_ch'</span>: ch_out,</span>
+<span id="cb10-58"><a href="#cb10-58" aria-hidden="true" tabindex="-1"></a>            <span class="st">'filter_size'</span>: fs,</span>
+<span id="cb10-59"><a href="#cb10-59" aria-hidden="true" tabindex="-1"></a>            <span class="st">'img_size'</span>: pixels,</span>
+<span id="cb10-60"><a href="#cb10-60" aria-hidden="true" tabindex="-1"></a>            <span class="co"># 'kernel': kernel_name,</span></span>
+<span id="cb10-61"><a href="#cb10-61" aria-hidden="true" tabindex="-1"></a>        } <span class="op">|</span> timings)</span>
+<span id="cb10-62"><a href="#cb10-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-63"><a href="#cb10-63" aria-hidden="true" tabindex="-1"></a><span class="cf">finally</span>:</span>
+<span id="cb10-64"><a href="#cb10-64" aria-hidden="true" tabindex="-1"></a>    ctx.pop()</span>
+<span id="cb10-65"><a href="#cb10-65" aria-hidden="true" tabindex="-1"></a>    ctx.detach()</span>
+<span id="cb10-66"><a href="#cb10-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-67"><a href="#cb10-67" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> pd.DataFrame(data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<script type="application/vnd.jupyter.widget-view+json">
+{"model_id":"a3f5e88bf66e493e906080afa2010c91","version_major":2,"version_minor":0,"quarto_mimetype":"application/vnd.jupyter.widget-view+json"}
+</script>
+</div>
+</div>
+<div id="cell-12" class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Sort by conv2d_pad timing</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>results_sorted <span class="op">=</span> results.sort_values(by<span class="op">=</span><span class="st">'conv2d_pad'</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a plot comparing the two kernels</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> seaborn <span class="im">as</span> sns</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Create labels for x-axis that include dimensions</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>results_sorted[<span class="st">'dimensions'</span>] <span class="op">=</span> results_sorted.<span class="bu">apply</span>(</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">lambda</span> row: <span class="ss">f"</span><span class="sc">{</span><span class="bu">int</span>(row[<span class="st">'img_size'</span>])<span class="sc">}</span><span class="ss">×</span><span class="sc">{</span><span class="bu">int</span>(row[<span class="st">'img_size'</span>])<span class="sc">}</span><span class="ss">×</span><span class="sc">{</span><span class="bu">int</span>(row[<span class="st">'in_ch'</span>])<span class="sc">}</span><span class="ss"> -&gt; </span><span class="sc">{</span><span class="bu">int</span>(row[<span class="st">'out_ch'</span>])<span class="sc">}</span><span class="ss">, f:</span><span class="sc">{</span><span class="bu">int</span>(row[<span class="st">'filter_size'</span>])<span class="sc">}</span><span class="ss">×</span><span class="sc">{</span><span class="bu">int</span>(row[<span class="st">'filter_size'</span>])<span class="sc">}</span><span class="ss">"</span>,</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    axis<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Melt the dataframe to get it in the right format for seaborn</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>melted_results <span class="op">=</span> pd.melt(</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>    results_sorted,</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>    id_vars<span class="op">=</span>[<span class="st">'in_ch'</span>, <span class="st">'out_ch'</span>, <span class="st">'filter_size'</span>, <span class="st">'img_size'</span>, <span class="st">'dimensions'</span>],</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>    value_vars<span class="op">=</span>[<span class="st">'conv2d_pad'</span>, <span class="st">'conv2d_pad_z_out'</span>, <span class="st">'conv2d_pad_z_out_shared'</span>],</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>    var_name<span class="op">=</span><span class="st">'kernel'</span>,</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>    value_name<span class="op">=</span><span class="st">'time'</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Split the data into two halves based on timing</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>midpoint <span class="op">=</span> <span class="bu">len</span>(results_sorted) <span class="op">//</span> <span class="dv">2</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>faster_results <span class="op">=</span> melted_results[melted_results[<span class="st">'dimensions'</span>].isin(results_sorted[<span class="st">'dimensions'</span>][:midpoint])]</span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>slower_results <span class="op">=</span> melted_results[melted_results[<span class="st">'dimensions'</span>].isin(results_sorted[<span class="st">'dimensions'</span>][midpoint:])]</span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a figure with two subplots</span></span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a>fig, (ax1, ax2) <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">1</span>, figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">16</span>))</span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot faster results in the first subplot</span></span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a>sns.barplot(x<span class="op">=</span><span class="st">'dimensions'</span>, y<span class="op">=</span><span class="st">'time'</span>, hue<span class="op">=</span><span class="st">'kernel'</span>, data<span class="op">=</span>faster_results, ax<span class="op">=</span>ax1)</span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a>ax1.set_xlabel(<span class="st">''</span>)</span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a>ax1.set_ylabel(<span class="st">'Time (ms)'</span>)</span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a>ax1.set_title(<span class="st">'Performance Comparison - Faster Results'</span>)</span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a>ax1.tick_params(axis<span class="op">=</span><span class="st">'x'</span>, rotation<span class="op">=</span><span class="dv">90</span>)</span>
+<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a>ax1.legend(title<span class="op">=</span><span class="st">'Kernel'</span>)</span>
+<span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot slower results in the second subplot</span></span>
+<span id="cb11-40"><a href="#cb11-40" aria-hidden="true" tabindex="-1"></a>sns.barplot(x<span class="op">=</span><span class="st">'dimensions'</span>, y<span class="op">=</span><span class="st">'time'</span>, hue<span class="op">=</span><span class="st">'kernel'</span>, data<span class="op">=</span>slower_results, ax<span class="op">=</span>ax2)</span>
+<span id="cb11-41"><a href="#cb11-41" aria-hidden="true" tabindex="-1"></a>ax2.set_xlabel(<span class="st">'Input and Filter Dimensions'</span>)</span>
+<span id="cb11-42"><a href="#cb11-42" aria-hidden="true" tabindex="-1"></a>ax2.set_ylabel(<span class="st">'Time (ms)'</span>)</span>
+<span id="cb11-43"><a href="#cb11-43" aria-hidden="true" tabindex="-1"></a>ax2.set_title(<span class="st">'Performance Comparison - Slower Results'</span>)</span>
+<span id="cb11-44"><a href="#cb11-44" aria-hidden="true" tabindex="-1"></a>ax2.tick_params(axis<span class="op">=</span><span class="st">'x'</span>, rotation<span class="op">=</span><span class="dv">90</span>)</span>
+<span id="cb11-45"><a href="#cb11-45" aria-hidden="true" tabindex="-1"></a>ax2.legend(title<span class="op">=</span><span class="st">'Kernel'</span>)</span>
+<span id="cb11-46"><a href="#cb11-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-47"><a href="#cb11-47" aria-hidden="true" tabindex="-1"></a><span class="co"># Adjust layout</span></span>
+<span id="cb11-48"><a href="#cb11-48" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb11-49"><a href="#cb11-49" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb11-50"><a href="#cb11-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-51"><a href="#cb11-51" aria-hidden="true" tabindex="-1"></a><span class="co"># Also display the sorted results table</span></span>
+<span id="cb11-52"><a href="#cb11-52" aria-hidden="true" tabindex="-1"></a>results_sorted</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="day_11_conv2d-halo_files/figure-html/cell-11-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">in_ch</th>
+<th data-quarto-table-cell-role="th">out_ch</th>
+<th data-quarto-table-cell-role="th">filter_size</th>
+<th data-quarto-table-cell-role="th">img_size</th>
+<th data-quarto-table-cell-role="th">conv2d_pad_z_out_shared</th>
+<th data-quarto-table-cell-role="th">conv2d_pad</th>
+<th data-quarto-table-cell-role="th">conv2d_pad_z_out</th>
+<th data-quarto-table-cell-role="th">dimensions</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">6</td>
+<td>1</td>
+<td>4</td>
+<td>1</td>
+<td>128</td>
+<td>0.013312</td>
+<td>0.014677</td>
+<td>0.018432</td>
+<td>128×128×1 -&gt; 4, f:1×1</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">37</td>
+<td>8</td>
+<td>1</td>
+<td>1</td>
+<td>128</td>
+<td>0.017408</td>
+<td>0.014677</td>
+<td>0.013995</td>
+<td>128×128×8 -&gt; 1, f:1×1</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">23</td>
+<td>1</td>
+<td>4</td>
+<td>3</td>
+<td>128</td>
+<td>0.022560</td>
+<td>0.017749</td>
+<td>0.015019</td>
+<td>128×128×1 -&gt; 4, f:3×3</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">20</td>
+<td>3</td>
+<td>8</td>
+<td>1</td>
+<td>128</td>
+<td>0.019456</td>
+<td>0.019797</td>
+<td>0.016384</td>
+<td>128×128×3 -&gt; 8, f:1×1</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">35</td>
+<td>3</td>
+<td>1</td>
+<td>5</td>
+<td>64</td>
+<td>0.032085</td>
+<td>0.022187</td>
+<td>0.022528</td>
+<td>64×64×3 -&gt; 1, f:5×5</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">11</td>
+<td>1</td>
+<td>1</td>
+<td>3</td>
+<td>128</td>
+<td>0.015701</td>
+<td>0.022187</td>
+<td>0.024576</td>
+<td>128×128×1 -&gt; 1, f:3×3</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">36</td>
+<td>8</td>
+<td>4</td>
+<td>1</td>
+<td>128</td>
+<td>0.026624</td>
+<td>0.023211</td>
+<td>0.018432</td>
+<td>128×128×8 -&gt; 4, f:1×1</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">16</td>
+<td>3</td>
+<td>1</td>
+<td>1</td>
+<td>512</td>
+<td>0.034133</td>
+<td>0.024917</td>
+<td>0.024917</td>
+<td>512×512×3 -&gt; 1, f:1×1</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">3</td>
+<td>1</td>
+<td>1</td>
+<td>9</td>
+<td>256</td>
+<td>0.048811</td>
+<td>0.030720</td>
+<td>0.030379</td>
+<td>256×256×1 -&gt; 1, f:9×9</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">29</td>
+<td>3</td>
+<td>8</td>
+<td>3</td>
+<td>64</td>
+<td>0.019797</td>
+<td>0.038571</td>
+<td>0.016043</td>
+<td>64×64×3 -&gt; 8, f:3×3</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">28</td>
+<td>3</td>
+<td>8</td>
+<td>3</td>
+<td>128</td>
+<td>0.034475</td>
+<td>0.041984</td>
+<td>0.026891</td>
+<td>128×128×3 -&gt; 8, f:3×3</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">27</td>
+<td>1</td>
+<td>4</td>
+<td>9</td>
+<td>256</td>
+<td>0.102400</td>
+<td>0.070997</td>
+<td>0.060075</td>
+<td>256×256×1 -&gt; 4, f:9×9</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">30</td>
+<td>1</td>
+<td>4</td>
+<td>5</td>
+<td>512</td>
+<td>0.145067</td>
+<td>0.081291</td>
+<td>0.087381</td>
+<td>512×512×1 -&gt; 4, f:5×5</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">24</td>
+<td>1</td>
+<td>32</td>
+<td>5</td>
+<td>64</td>
+<td>0.030379</td>
+<td>0.098645</td>
+<td>0.022187</td>
+<td>64×64×1 -&gt; 32, f:5×5</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">43</td>
+<td>1</td>
+<td>32</td>
+<td>1</td>
+<td>512</td>
+<td>0.193536</td>
+<td>0.103765</td>
+<td>0.162133</td>
+<td>512×512×1 -&gt; 32, f:1×1</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">44</td>
+<td>32</td>
+<td>1</td>
+<td>3</td>
+<td>256</td>
+<td>0.177493</td>
+<td>0.105813</td>
+<td>0.102741</td>
+<td>256×256×32 -&gt; 1, f:3×3</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">26</td>
+<td>3</td>
+<td>32</td>
+<td>3</td>
+<td>64</td>
+<td>0.035861</td>
+<td>0.117419</td>
+<td>0.026624</td>
+<td>64×64×3 -&gt; 32, f:3×3</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">19</td>
+<td>32</td>
+<td>4</td>
+<td>3</td>
+<td>64</td>
+<td>0.086016</td>
+<td>0.169984</td>
+<td>0.055637</td>
+<td>64×64×32 -&gt; 4, f:3×3</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">48</td>
+<td>8</td>
+<td>8</td>
+<td>3</td>
+<td>256</td>
+<td>0.274411</td>
+<td>0.184661</td>
+<td>0.159061</td>
+<td>256×256×8 -&gt; 8, f:3×3</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">22</td>
+<td>3</td>
+<td>8</td>
+<td>1</td>
+<td>1024</td>
+<td>0.545109</td>
+<td>0.212992</td>
+<td>0.424960</td>
+<td>1024×1024×3 -&gt; 8, f:1×1</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">8</td>
+<td>3</td>
+<td>128</td>
+<td>1</td>
+<td>256</td>
+<td>0.403819</td>
+<td>0.267605</td>
+<td>0.287712</td>
+<td>256×256×3 -&gt; 128, f:1×1</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">45</td>
+<td>8</td>
+<td>4</td>
+<td>1</td>
+<td>1024</td>
+<td>0.630827</td>
+<td>0.278187</td>
+<td>0.458411</td>
+<td>1024×1024×8 -&gt; 4, f:1×1</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">31</td>
+<td>3</td>
+<td>4</td>
+<td>3</td>
+<td>1024</td>
+<td>0.758027</td>
+<td>0.330411</td>
+<td>0.520192</td>
+<td>1024×1024×3 -&gt; 4, f:3×3</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">18</td>
+<td>1</td>
+<td>128</td>
+<td>3</td>
+<td>256</td>
+<td>0.480256</td>
+<td>0.335189</td>
+<td>0.303787</td>
+<td>256×256×1 -&gt; 128, f:3×3</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">17</td>
+<td>8</td>
+<td>1</td>
+<td>9</td>
+<td>512</td>
+<td>0.724992</td>
+<td>0.380587</td>
+<td>0.361813</td>
+<td>512×512×8 -&gt; 1, f:9×9</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">39</td>
+<td>8</td>
+<td>128</td>
+<td>1</td>
+<td>128</td>
+<td>0.270379</td>
+<td>0.387413</td>
+<td>0.155989</td>
+<td>128×128×8 -&gt; 128, f:1×1</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">25</td>
+<td>128</td>
+<td>1</td>
+<td>1</td>
+<td>512</td>
+<td>0.657067</td>
+<td>0.400043</td>
+<td>0.393557</td>
+<td>512×512×128 -&gt; 1, f:1×1</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">14</td>
+<td>128</td>
+<td>4</td>
+<td>3</td>
+<td>64</td>
+<td>0.310613</td>
+<td>0.631808</td>
+<td>0.172032</td>
+<td>64×64×128 -&gt; 4, f:3×3</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">32</td>
+<td>32</td>
+<td>32</td>
+<td>1</td>
+<td>256</td>
+<td>1.176277</td>
+<td>0.664235</td>
+<td>0.752640</td>
+<td>256×256×32 -&gt; 32, f:1×1</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">33</td>
+<td>128</td>
+<td>1</td>
+<td>5</td>
+<td>256</td>
+<td>1.505963</td>
+<td>0.763904</td>
+<td>0.733867</td>
+<td>256×256×128 -&gt; 1, f:5×5</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>8</td>
+<td>128</td>
+<td>3</td>
+<td>64</td>
+<td>0.202411</td>
+<td>1.090560</td>
+<td>0.121173</td>
+<td>64×64×8 -&gt; 128, f:3×3</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">49</td>
+<td>3</td>
+<td>128</td>
+<td>5</td>
+<td>64</td>
+<td>0.228352</td>
+<td>1.109632</td>
+<td>0.112299</td>
+<td>64×64×3 -&gt; 128, f:5×5</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">13</td>
+<td>1</td>
+<td>32</td>
+<td>9</td>
+<td>512</td>
+<td>2.565461</td>
+<td>1.423701</td>
+<td>1.346496</td>
+<td>512×512×1 -&gt; 32, f:9×9</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">42</td>
+<td>3</td>
+<td>512</td>
+<td>3</td>
+<td>128</td>
+<td>1.388171</td>
+<td>1.845259</td>
+<td>0.712021</td>
+<td>128×128×3 -&gt; 512, f:3×3</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">21</td>
+<td>8</td>
+<td>128</td>
+<td>1</td>
+<td>512</td>
+<td>4.980736</td>
+<td>1.896128</td>
+<td>3.599317</td>
+<td>512×512×8 -&gt; 128, f:1×1</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">9</td>
+<td>128</td>
+<td>1</td>
+<td>9</td>
+<td>256</td>
+<td>4.014080</td>
+<td>1.963691</td>
+<td>1.923755</td>
+<td>256×256×128 -&gt; 1, f:9×9</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">46</td>
+<td>32</td>
+<td>8</td>
+<td>9</td>
+<td>128</td>
+<td>1.408363</td>
+<td>1.988608</td>
+<td>0.731477</td>
+<td>128×128×32 -&gt; 8, f:9×9</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">0</td>
+<td>32</td>
+<td>128</td>
+<td>3</td>
+<td>128</td>
+<td>3.384661</td>
+<td>5.587627</td>
+<td>1.667072</td>
+<td>128×128×32 -&gt; 128, f:3×3</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">40</td>
+<td>1</td>
+<td>32</td>
+<td>9</td>
+<td>1024</td>
+<td>12.256256</td>
+<td>5.811200</td>
+<td>6.014293</td>
+<td>1024×1024×1 -&gt; 32, f:9×9</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">47</td>
+<td>512</td>
+<td>4</td>
+<td>1</td>
+<td>512</td>
+<td>11.096747</td>
+<td>6.729387</td>
+<td>5.955925</td>
+<td>512×512×512 -&gt; 4, f:1×1</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>8</td>
+<td>8</td>
+<td>9</td>
+<td>1024</td>
+<td>24.125451</td>
+<td>12.846773</td>
+<td>14.283093</td>
+<td>1024×1024×8 -&gt; 8, f:9×9</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">41</td>
+<td>512</td>
+<td>8</td>
+<td>3</td>
+<td>256</td>
+<td>17.939190</td>
+<td>16.718848</td>
+<td>11.764704</td>
+<td>256×256×512 -&gt; 8, f:3×3</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">38</td>
+<td>128</td>
+<td>8</td>
+<td>9</td>
+<td>256</td>
+<td>24.203318</td>
+<td>18.254550</td>
+<td>12.945440</td>
+<td>256×256×128 -&gt; 8, f:9×9</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">5</td>
+<td>128</td>
+<td>4</td>
+<td>3</td>
+<td>1024</td>
+<td>37.974016</td>
+<td>25.287701</td>
+<td>23.289515</td>
+<td>1024×1024×128 -&gt; 4, f:3×3</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">7</td>
+<td>1</td>
+<td>128</td>
+<td>9</td>
+<td>1024</td>
+<td>50.371583</td>
+<td>26.570752</td>
+<td>28.357973</td>
+<td>1024×1024×1 -&gt; 128, f:9×9</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">34</td>
+<td>512</td>
+<td>4</td>
+<td>3</td>
+<td>512</td>
+<td>37.451136</td>
+<td>27.270486</td>
+<td>25.335520</td>
+<td>512×512×512 -&gt; 4, f:3×3</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">1</td>
+<td>8</td>
+<td>512</td>
+<td>9</td>
+<td>128</td>
+<td>23.107925</td>
+<td>35.587467</td>
+<td>12.653866</td>
+<td>128×128×8 -&gt; 512, f:9×9</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">12</td>
+<td>32</td>
+<td>8</td>
+<td>9</td>
+<td>1024</td>
+<td>107.734355</td>
+<td>59.062336</td>
+<td>57.880950</td>
+<td>1024×1024×32 -&gt; 8, f:9×9</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">10</td>
+<td>1</td>
+<td>512</td>
+<td>9</td>
+<td>1024</td>
+<td>204.436142</td>
+<td>113.762347</td>
+<td>116.663638</td>
+<td>1024×1024×1 -&gt; 512, f:9×9</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">15</td>
+<td>128</td>
+<td>4</td>
+<td>9</td>
+<td>1024</td>
+<td>206.882517</td>
+<td>124.058678</td>
+<td>113.531560</td>
+<td>1024×1024×128 -&gt; 4, f:9×9</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<section id="for-some-reason-the-version-with-shared-memory-is-actually-slower.-not-entirely-sure-why-because-it-looks-correct" class="level3">
+<h3 class="anchored" data-anchor-id="for-some-reason-the-version-with-shared-memory-is-actually-slower.-not-entirely-sure-why-because-it-looks-correct">For some reason, the version with shared memory is actually slower. Not entirely sure why, because it looks correct</h3>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/xl0\.github\.io\/cuda-100");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
