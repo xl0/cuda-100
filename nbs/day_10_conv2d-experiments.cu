@@ -65,8 +65,8 @@ __global__ void conv2d_pad(float *in,
 
         // Loop over the input channels
         for (int in_c = 0; in_c < in_channels; in_c++) {
-            // Pointer to the 2d slice of the filter that corresponds to the active input and output
-            // channels
+            // Pointer to the 2d slice of the filter that corresponds to the active input and
+            // output channels
             float *sub_filter = filter + (filter_size * filter_size * in_channels * out_c) +
                                 (filter_size * filter_size * in_c);
             // Pinter to the current channel in the input
@@ -127,7 +127,6 @@ __global__ void conv2d_pad_z_out(float *in,
 
     // // Pointer to the 2d slice of the output
     float *sub_output = out + out_ch * w * h;
-
     // Loop over the input channels
     for (int in_c = 0; in_c < in_channels; in_c++) {
         // Pointer to the 2d slice of the filter that corresponds to the active input and output
