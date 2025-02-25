@@ -34,7 +34,7 @@
 - Day 10 [faster
   conv2d](https://xl0.github.io/cuda-100/day_10_conv2d-experiments.html)
 - Day 11 [conv2d with shared
-  memory](https://xl0.github.io/cuda-100/day_11_conv2d_halo.html)
+  memory](https://xl0.github.io/cuda-100/day_11_conv2d-halo.html)
 
 Some CUDA (or C) quirks to note:
 
