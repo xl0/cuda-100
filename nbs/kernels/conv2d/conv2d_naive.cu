@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "conv2d-helpers.h"
+
 /* 2D convolution, with padding to valid shape. Channel-first */
 __global__ void conv2d_pad(float *in,
                            float *out,
@@ -28,39 +30,15 @@ __global__ void conv2d_pad(float *in,
     // 2 - height
     // 3 - width
 
-    // if (x == 0 && y == 0) {
-    //     printf("h: %d\n", h);
-    //     printf("w: %d\n", w);
-    //     printf("in_channels: %d\n", in_channels);
-    //     printf("out_channels: %d\n", out_channels);
-    //     printf("filter_size: %d\n", filter_size);
-    //     printf("filter r: %d\n", filter_r);
-    //     printf("pad: %f\n", pad);
-
-    //     printf("Filter:\n");
-    //     for (int oc = 0; oc < out_channels; oc++) {
-    //         printf("Output channel %d:\n", oc);
-    //         for (int ic = 0; ic < in_channels; ic++) {
-    //             printf("  Input channel %d:\n", ic);
-    //             float *sub_filter = filter + (filter_size * filter_size * in_channels * oc) +
-    //                                 (filter_size * filter_size * ic);
-    //             for (int i = 0; i < filter_size; i++) {
-    //                 printf("    ");
-    //                 for (int j = 0; j < filter_size; j++) {
-    //                     printf("%f ", sub_filter[i * filter_size + j]);
-    //                 }
-    //                 printf("\n");
-    //             }
-    //         }
-    //     }
-    // }
-
-
     if (x >= w || y >= h) return;
+
+#ifdef DEBUG
+    if (x == 0 && y == 0) PRINT_INPUTS();
+#endif
 
     // Loop over the output channels
     for (int out_c = 0; out_c < out_channels; out_c++) {
-        float R = 0;
+        ACCUM_DTYPE R = 0;
 
         // Pointer to the 2d slice of the output
         float *sub_output = out + out_c * w * h;

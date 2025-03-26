@@ -18,8 +18,10 @@ format:
     theme: cosmo
     css: styles.css
     toc: true
-    toc-location: left
+    # toc-location: left
     page-layout: full
+    embed-resources: true
+
 
 website:
   twitter-card:

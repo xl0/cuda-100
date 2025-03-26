@@ -10,3 +10,8 @@ website:
       - day_05_matrix-vector.ipynb
       - day_06_matmul-tiled.ipynb
       - day_07_matmul-tiled-experiments.ipynb
+      - day_08_thread-coarsening.ipynb
+      - day_09_conv2d.ipynb
+      - day_10_conv2d-experiments.ipynb
+      - day_11_conv2d-shared.ipynb
+      - day_12_conv2d-shared-halo.ipynb

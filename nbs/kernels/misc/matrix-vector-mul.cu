@@ -16,5 +16,3 @@ __global__ void mat_vec_mul(float* m, float* v, float* res,
         res[y] = out;
     }
 }
-
-

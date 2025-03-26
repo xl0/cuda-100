@@ -23,7 +23,6 @@ __global__ void matmul_fp32_tiled_bc(float* m1, float* m2, float* res,
     int m2_x = out_shape_1;
 
     if (x < out_shape_1 && y < out_shape_0) {
-
         float R = 0;
         for (int tile = 0; tile < inner_dim / TILE_WIDTH; tile++) {
 
