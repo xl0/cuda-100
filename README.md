@@ -34,13 +34,34 @@
 - Day 10 [faster
   conv2d](https://xl0.github.io/cuda-100/day_10_conv2d-experiments.html)
 - Day 11 [conv2d with shared
-  memory](https://xl0.github.io/cuda-100/day_11_conv2d-halo.html)
+  memory](https://xl0.github.io/cuda-100/day_11_conv2d-shared.html)
+- Day 12 [conv2d with shared memory +
+  halo](https://xl0.github.io/cuda-100/day_12_conv2d-shared-halo.html)
 
 Some CUDA (or C) quirks to note:
 
-    uint32_t a =  1;
-    int32_t  j = -1;
-    j >= a: True
-    j +  a: 0
+#### Signed-unsigned comparison is dumb
+
+``` c
+uint32_t a =  1;
+int32_t  j = -1;
+j >= a == true
+j +  a == 0
+```
 
 Somehow this is how type casting works in C. :/
+
+#### Benchmarking
+
+Run this script before benchmarking to lock gpu/mem frequence and
+hopefully avoid thermal throttling and unstable timings
+
+``` bash
+
+sudo nvidia-smi -pm 1 # Set GPU to persistent mode
+sleep 2
+
+sudo nvidia-smi -lgc 1000,1000 # Lock clocks to prevent frequency scaling
+sudo nvidia-smi -lmc 5000,5000 # Memory clock
+sudo nvidia-smi --auto-boost-default=0  # Disable auto-boost
+```
